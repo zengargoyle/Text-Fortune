@@ -176,6 +176,10 @@ class File {
     $content;
   }
 
+  method random {
+    $.get-fortune( $.count.rand.Int );
+  }
+
   method get-fortune ( Int $n ) {
     my $fortune = $.get-from-offset( $!index.offset-at( $n ) );
     if $.flags<rotated> {
