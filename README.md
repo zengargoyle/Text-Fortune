@@ -22,7 +22,7 @@ It's workable, but very ugly.
     
     # load existing '.dat' file
     my $index = Text::Fortune::Index.new.load-dat($datfile);
-    print qq:to('END');
+    print qq:to<END>;
     there are {$index.count} fortunes delimited by {$index.delimiter}
     the longest is {$index.longest} characters
     the shortest is {$index.shortest}
@@ -33,7 +33,7 @@ It's workable, but very ugly.
 
     # bare fortune(6)
     my $fortune = Text::Fortune::File.new( path => '/usr/share/games/fortunes/perl' );
-    say $fortune.get-fortune((0..^$fortune.count).pick)
+    say $fortune.get-fortune((0..^$fortune.count).pick)  # aka .random()
 
     ---
     Tcl tends to get ported to weird places like routers.
