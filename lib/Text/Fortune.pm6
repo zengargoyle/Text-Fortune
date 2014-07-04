@@ -45,7 +45,7 @@ class Index {
     @!offset[$at];
   }
 
-  method length-of ( Int $at ) {
+  method bytelength-of ( Int $at ) {
     if $at >= $!count {
       X::Index::OutOfBounds.new.throw;
     }

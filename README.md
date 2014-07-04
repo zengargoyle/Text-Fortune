@@ -28,7 +28,7 @@ It's workable, but very ugly.
     the shortest is {$index.shortest}
     they are {$index.flags<rotated> ?? 'not' !! ''} in rot13 (obscene)
     the offset of the last quote is {$index.offset-at($index.count - 1)}
-    and it is {$index.length-of($index.count - 1)} characters
+    and it is {$index.bytelength-of($index.count - 1)} *bytes*
     END
 
     # bare fortune(6)
