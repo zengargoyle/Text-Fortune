@@ -183,10 +183,7 @@ class File {
   method get-fortune ( Int $n ) {
     my $fortune = $.get-from-offset( $!index.offset-at( $n ) );
     if $.flags<rotated> {
-      $fortune .= trans(
-        'a..m' => 'n..z', 'n..z' => 'a..m',
-        'A..M' => 'N..Z', 'N..Z' => 'A..M',
-      );
+      $fortune .= trans( 'n..za..mN..ZA..M' => 'a..zA..Z' );
     }
     $fortune;
   }
