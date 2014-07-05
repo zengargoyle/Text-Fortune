@@ -25,7 +25,7 @@ class Index {
   has Int $.count = 0;
   has Int $.longest = 0;
   has Int $.shortest = 0xFFFFFFFF;
-  has %!flags;
+  has Bool %!flags;
   has Str $.delimiter;
   has Int @!offset;
 
@@ -188,4 +188,48 @@ class File {
     $fortune;
   }
 
+}
+
+class X::Flags::UnknownFlag is Exception {
+  has $.flag;
+  method message { "Unknown flag '$.flag'." }
+}
+
+class Flags {
+  has EnumMap $!em;
+  has SetHash $!sh;
+  method new($map, *@sets) {
+    self.bless(:$map, :@sets);
+  }
+  submethod BUILD (:$map, :@sets) {
+    $!em = enum ( $map.list );
+    $!sh .= new;
+    self.set( @sets );
+  }
+  method _set(Bool $tf, *@sets) {
+    for @sets -> $s {
+      unless $!em{$s} :exists {
+        X::Flags::UnknownFlag.new(flag => $s).throw;
+      }
+      $!sh{$s} = $tf;
+      self;
+    }
+    method set(*@sets) { $._set( True, @sets ) }
+    method clear(*@sets) { $._set( False, @sets ) }
+  }
+  method Int { [+] $!sh.keys.map: { $!em{ $^k } } };
+  method from-int(Int $n) {
+    for $!em.kv -> $k, $v {
+      $!sh{$k} = True if $n +& $v;
+    }
+    self;
+  }
+  method flag ($f --> Bool) {
+    unless $!em{$f} :exists {
+      X::Flags::UnknownFlag.new(flag => $f).throw;
+    }
+    $!sh{$f};
+  }
+  method flags { $!em.keys }
+  method set-flags { $!sh.keys }
 }
