@@ -19,27 +19,21 @@ class X::Index::OutOfBounds is Exception {
 
 class Index {
 
-  my enum Flags( random => 1, ordered => 2, rotated => 4 );
+  my @DAT_FLAGS =  random => 1, ordered => 2, rotated => 4;
 
   has Int $.version = 2;
   has Int $.count = 0;
   has Int $.longest = 0;
   has Int $.shortest = 0xFFFFFFFF;
-  has Bool %!flags;
+  has Flags $!flags;
   has Str $.delimiter;
   has Int @!offset;
 
-  method flags-to-int {
-    [+] gather for %!flags.keys {
-      take Flags.enums{ $_ } if %!flags{$_};
-    }
-  }
+  method flags-to-int { $!flags.Int }
 
-  method flags-from-int( Int $flags ) {
-    Flags.enums.keys.map: { $^a => ?($flags +& Flags.enums{ $^a }) };
-  }
+  method flags-from-int( Int $flags ) { $!flags.from-int( $flags ) }
 
-  method flags { %!flags; }
+  method flags { $!flags.flags; }
 
   method offset-at ( Int $at ) {
     @!offset[$at];
@@ -58,10 +52,14 @@ class Index {
     Bool :$random = False,
     Str :$!delimiter = '%',
   ) {
-    %!flags = :$rotated, :$ordered, :$random;
+
     if $ordered | $random {
       X::Index::Unsupported.new.throw;
     }
+
+    $!flags = Flags.new(
+      @DAT_FLAGS, Set.new(:$rotated, :$ordered, :$random).keys
+    );
   }
 
   method load-fortune ($fortunefile) {
@@ -102,7 +100,7 @@ class Index {
       $!longest = $dat.read(4).unpack('N');
       $!shortest = $dat.read(4).unpack('N');
 
-      %!flags = self.flags-from-int( $dat.read(4).unpack('N') );
+      self!flags-from-int( $dat.read(4).unpack('N') );
 
       $!delimiter = $dat.read(1).unpack('C').chr;
 
@@ -121,7 +119,7 @@ class Index {
     $b ~= pack('N', $!longest);
     $b ~= pack('N', $!shortest);
 
-    $b ~= pack('N', $.flags-to-int);
+    $b ~= pack('N', self!flags-to-int);
     $b ~= pack('CCCC', $!delimiter.ord, 0, 0, 0);
 
     if $!count == 0 {
@@ -142,7 +140,7 @@ class File {
   has $!index handles <version count longest shortest delimiter>;
   has %!flags;
 
-  method flags { %!flags };
+  method flags { %!flags.keys };
 
   submethod BUILD (
     :$path as IO,
@@ -161,8 +159,8 @@ class File {
     else {
       $!index = Text::Fortune::Index.new.load-fortune( $path );
     }
-    %!flags = $!index.flags;
-    %!flags<rotated> = $rotated if $rotated.defined;
+    %!flags := Set.new( $!index.flags );
+    %!flags<rotated> = True if $rotated.defined;
   }
 
   method get-from-offset ( Int $o ) {
@@ -182,7 +180,7 @@ class File {
 
   method get-fortune ( Int $n ) {
     my $fortune = $.get-from-offset( $!index.offset-at( $n ) );
-    if $.flags<rotated> {
+    if %!flags<rotated> {
       $fortune .= trans( 'n..za..mN..ZA..M' => 'a..zA..Z' );
     }
     $fortune;
