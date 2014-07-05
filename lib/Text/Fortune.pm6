@@ -121,7 +121,7 @@ class Index {
       my $len;
       while $ff.get -> $line {
         last if $line eq $stop;
-        $len += $line.bytes
+        $len += $line.chars
       }
       if $len {
         $!longest max= $len;
