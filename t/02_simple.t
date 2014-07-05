@@ -10,19 +10,19 @@ throws_like { Text::Fortune::Index.new.load-dat( 'not_found.dat' ) },
 
 given Text::Fortune::Index.new {
   is .flags-from-int(0),
-    %(random => False, ordered => False, rotated => False  ),
+    @(),
     'null flags';
 }
 
 given Text::Fortune::Index.new {
   is .flags-from-int(4),
-    %(random => False, ordered => False, rotated => True  ),
+    <rotated>,
     'one flag';
 }
 
 given Text::Fortune::Index.new {
   is .flags-from-int(5),
-    %(random => True, ordered => False, rotated => True  ),
+    <random rotated>,
     'two flags';
 }
 

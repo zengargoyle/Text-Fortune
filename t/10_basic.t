@@ -19,7 +19,7 @@ given Text::Fortune::File.new( path => 'without_dat') {
   is .get-fortune(2), "a\nb\nc\n", 'got last fortune';
 }
 given Text::Fortune::File.new( path => 'with_dat', rotated => True) {
-  is .flags<rotated>, True, 'forced rotation';
+  is .flag(<rotated>), True, 'forced rotation';
   is .get-fortune(0), "n\n", 'got first fortune';
   is .get-fortune(2), "n\no\np\n", 'got last fortune';
 }
