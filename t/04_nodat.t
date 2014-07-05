@@ -26,3 +26,5 @@ given Text::Fortune::Index.new.load-fortune( 'empty' ) {
 }
 
 done;
+
+# vim: ft=perl6

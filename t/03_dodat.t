@@ -18,3 +18,5 @@ given Text::Fortune::Index.new.load-dat( 'with_dat.dat' ) {
 }
 
 done;
+
+# vim: ft=perl6

@@ -26,7 +26,7 @@ It's workable, but very ugly.
     there are {$index.count} fortunes delimited by {$index.delimiter}
     the longest is {$index.longest} characters
     the shortest is {$index.shortest}
-    they are {$index.flags<rotated> ?? 'not' !! ''} in rot13 (obscene)
+    they are {$.rotated ?? '' !! 'not'} in rot13 (obscene)
     the offset of the last quote is {$index.offset-at($index.count - 1)}
     and it is {$index.bytelength-of($index.count - 1)} *bytes*
     END

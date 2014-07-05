@@ -15,14 +15,9 @@ given Text::Fortune::Index.new {
 given Text::Fortune::Index.new(:rotated, delimiter => '@') {
   is .flags-to-int, 4, 'flags might work';
   is .delimiter, '@', 'can set delimiter';
-  is .flag(<rotated>), True, 'is rotated';
-  is .flag(<ordered>), False, 'is not ordered';
+  is .rotated, True, 'is rotated';
 }
 
-dies_ok { Text::Fortune::Index.new(:ordered) }, 'dies with ordered';
-
-throws_like { Text::Fortune::Index.new(:ordered) },
-  X::Index::Unsupported,
-  message => rx:s/are not supported/;
-
 done;
+
+# vim: ft=perl6

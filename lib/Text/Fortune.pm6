@@ -1,110 +1,50 @@
 
 module Text::Fortune:ver<0.01>;
 
-class X::Flags::UnknownFlag is Exception {
-  has $.flag;
-  method message { "Unknown flag '$.flag'." }
-}
-
-class Flags {
-  has EnumMap $!em;
-  has SetHash $!sh;
-  method new($map, *@sets) {
-    self.bless(:$map, :@sets);
-  }
-  submethod BUILD (:$map, :@sets) {
-    $!em = enum ( $map.list );
-    $!sh .= new;
-    self.set( @sets );
-  }
-  method _set(Bool $tf, *@sets) {
-    for @sets -> $s {
-      unless $!em{$s} :exists {
-        X::Flags::UnknownFlag.new(flag => $s).throw;
-      }
-      $!sh{$s} = $tf;
-      self;
-    }
-    method set(*@sets) { $._set( True, @sets ) }
-    method clear(*@sets) { $._set( False, @sets ) }
-  }
-  method Int { [+] $!sh.keys.map: { $!em{ $^k } } };
-  method from-int(Int $n) {
-    for $!em.kv -> $k, $v {
-      $!sh{$k} = True if $n +& $v;
-    }
-    self;
-  }
-  method flag ($f --> Bool) {
-    unless $!em{$f} :exists {
-      X::Flags::UnknownFlag.new(flag => $f).throw;
-    }
-    $!sh{$f};
-  }
-  method flags { $!em.keys }
-  method set-flags { $!sh.keys }
-}
-
-class X::Index::Unsupported is Exception {
-  method message() {
-    "Options 'ordered' and 'rotated' are not supported.";
-  }
-}
-class X::Index::NotFound is Exception {
+my class X::Index::NotFound is Exception {
   method message() {
     "not found.";
   }
 }
-class X::Index::OutOfBounds is Exception {
+
+my class X::Index::OutOfBounds is Exception {
   method message() {
     "not found.";
   }
 }
 
 class Index {
-
-  my $DAT_FLAGS =  [ random => 1, ordered => 2, rotated => 4 ];
-
   has Int $.version = 2;
   has Int $.count = 0;
   has Int $.longest = 0;
   has Int $.shortest = 0xFFFFFFFF;
-  has Text::Fortune::Flags $!flags;
+  has Bool $.rotated = False;
   has Str $.delimiter;
   has Int @!offset;
 
-  method flags-to-int { $!flags.Int }
+  submethod BUILD ( Bool :$!rotated, Str :$!delimiter = '%' ) {
+    # TODO - check delimiter length and ASCII-ness
+  }
 
-  method flags-from-int( Int $flags ) { $!flags.from-int( $flags ).set-flags }
+  # 'rotated' is bit 3 (0x4) in the .dat file header flags field
+  method flags-to-int (--> Int) { $!rotated ?? 0x4 !! 0 }
+  method flags-from-int( Int $flags --> Bool ) { $!rotated = so $flags +& 0x4 }
 
-  method flag($f) { $!flags.flag($f); }
-  method set-flags { $!flags.set-flags }
-
-  method offset-at ( Int $at ) {
+  method offset-at ( Int $at --> Int ) {
     @!offset[$at];
   }
 
-  method bytelength-of ( Int $at ) {
+  # NOTE - fortune(6) has no concept of multi-byte encodings so
+  # this function has limited usefulness.  it's completely useless
+  # if either 'ordered' or 'random' flags are set, which is part of
+  # why we're not supporting them.  plus, ordered and random are
+  # rarely if ever seen in a .dat file for fortunes.
+  #
+  method bytelength-of ( Int $at --> Int ) {
     if $at >= $!count {
       X::Index::OutOfBounds.new.throw;
     }
     $.offset-at( $at+1 ) - $.offset-at( $at ) - 2;
-  }
-
-  submethod BUILD (
-    Bool :$rotated = False,
-    Bool :$ordered = False,
-    Bool :$random = False,
-    Str :$!delimiter = '%',
-  ) {
-
-    if $ordered | $random {
-      X::Index::Unsupported.new.throw;
-    }
-
-    $!flags = Flags.new(
-      $DAT_FLAGS.list, (:$rotated, :$ordered, :$random).map({$_.key if $_.value})
-    );
   }
 
   method load-fortune ($fortunefile) {
@@ -116,6 +56,8 @@ class Index {
 
     my $stop = $!delimiter ~ "\n";
 
+    # TODO - probably need to handle "%\n%\n" empty quotes, i think
+    # strffile(1) squashes them.
     while ! $ff.eof {
       my $pos = $ff.tell;
       my $len;
@@ -130,7 +72,13 @@ class Index {
         @!offset.push: $pos;
       }
     }
+
+    # NOTE - @offset.elems == $count + 1
+    # strfile(1) adds an offset for the end of the file, probably to
+    # support calculating quote length from @offset[$n+1] - @offset[$n] - 2
+    # logic.
     @!offset.push: $ff.tell;
+
     self;
   }
 
@@ -154,6 +102,10 @@ class Index {
         @!offset.push: $dat.read(4).unpack('N');
       }
     }
+    else {
+      # XXX - throw something...
+    }
+
     self;
   }
 
@@ -178,15 +130,13 @@ class Index {
 
     $b;
   }
+
 }
 
 class File {
-  has $!handle;
-  has $!index handles <version count longest shortest delimiter>;
-  has %!flags;
-
-  method flags { %!flags.keys };
-  method flag($f) { %!flags{$f} };
+  has IO::Handle $!handle;
+  has Text::Fortune::Index $!index handles <version count longest shortest delimiter>;
+  has Bool $.rotated;  # need our own to override in case .dat is wrong.
 
   submethod BUILD (
     :$path as IO,
@@ -206,9 +156,8 @@ class File {
       $!index = Text::Fortune::Index.new.load-fortune( $path );
     }
 
-    my %f = $!index.set-flags X=> True;
-    %f<rotated> = True if $rotated.defined;
-    %!flags := Set.new( %f.keys  );
+    $!rotated = $!index.rotated;
+    $!rotated = $rotated if $rotated.defined;
   }
 
   method get-from-offset ( Int $o ) {
@@ -222,13 +171,11 @@ class File {
     $content;
   }
 
-  method random {
-    $.get-fortune( $.count.rand.Int );
-  }
+  method random { $.get-fortune( $.count.rand.Int ) }
 
   method get-fortune ( Int $n ) {
     my $fortune = $.get-from-offset( $!index.offset-at( $n ) );
-    if %!flags<rotated> {
+    if $!rotated {
       $fortune .= trans( 'n..za..mN..ZA..M' => 'a..zA..Z' );
     }
     $fortune;
