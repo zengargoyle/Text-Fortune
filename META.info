@@ -3,5 +3,5 @@
     "version"     : "*",
     "description" : "Implements most of fortune(6)",
     "depends"     : [ "File::Find" ],
-    "source-url"  : "git://github.com/zengargoyle/perl6-Text-Fortune"
+    "source-url"  : "git://github.com/zengargoyle/Text-Fortune"
 }
