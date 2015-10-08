@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/zengargoyle/Text-Fortune.svg?branch=master)](https://travis-ci.org/zengargoyle/Text-Fortune)
+
 NAME
 ====
 
